@@ -1,10 +1,10 @@
 # 🦾 ros_arduino_uno_Q
 
 ## Table of Contents
-- [About](#-about)
-- [Architecture](#-architecture)
-- [Run package](#-run-package)
-- [License](#-license)
+- [About](#about)
+- [Architecture Overview](#architecture-overview)
+- [Run package](#run-package)
+- [License](#license)
 
 ## About
 
