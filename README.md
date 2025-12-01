@@ -55,31 +55,24 @@ git clone https://github.com/miguelgonrod/ros_arduino_uno_Q.git
 cd ros_arduino_uno_Q
 ```
 
-4) Run the Docker container with ROS 2 Jazzy
+4) Upload the `.ino` firmware using Arduino AppLab and run the Docker container with ROS 2 Jazzy
 
-Use the provided `run.sh` script to build and start the container:
+Use the provided `run.sh` script, this one will load the provided `.ino` file from the sketch/ directory, and upload it to the UNO Q, also will build and start the container:
 
 ```
 cd python
 chmod +x run.sh
 ./run.sh
 ```
-
-This launches a minimal ROS 2 Jazzy environment with the Arduino RPC bridge pre-installed.
-
-5) Upload the `.ino` firmware using Arduino AppLab
-
-Open *Arduino AppLab* on your computer, load the provided `.ino` file from the sketch/ directory, and upload it to the UNO Q just by pressing `RUN` button.
-
 This firmware exposes the RPC function:
 
 ```
 set_led_state(bool state)
 ```
 
-which the ROS 2 node will call.
+This launches a minimal ROS 2 Jazzy environment with the Arduino RPC bridge pre-installed.
 
-6) Open a tmux session inside the container
+5) Open a tmux session inside the container
 
 Since you will run multiple ROS commands inside the container, start a tmux session:
 
@@ -87,7 +80,7 @@ Since you will run multiple ROS commands inside the container, start a tmux sess
 tmux
 ```
 
-7) In the first tmux pane: run the ROS 2 subscriber node
+6) In the first tmux pane: run the ROS 2 subscriber node
 
 Inside the Docker container:
 ```
@@ -100,7 +93,7 @@ You should see:
 [INFO] [my_ros2_node]: Node started
 ```
 
-8) In a second tmux pane: publish the LED commands
+7) In a second tmux pane: publish the LED commands
 
 To open a second tmux pane push in your keyboard: `ctrl b` and then `c`
 
