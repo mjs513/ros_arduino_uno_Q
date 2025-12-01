@@ -2,6 +2,7 @@
 
 ## Table of Contents
 - [About](#about)
+- [Demostration](#demostration)
 - [Architecture Overview](#architecture-overview)
 - [Run package](#run-package)
 - [License](#license)
@@ -17,6 +18,13 @@ This project demonstrates how to turn the Arduino UNO Q into a fully ROS-enabled
 The goal is to treat the Arduino UNO Q not just as a microcontroller, but as a mini embedded robot computer capable of running ROS 2 natively while still accessing hardware in real time via the MCU.
 
 This approach allows seamless integration with ROS-based robotics workflows, bringing the UNO Q into modern robotics ecosystems.
+
+## Demostration
+
+
+https://github.com/user-attachments/assets/c57c8a9a-bfd8-4649-a59d-0abdea663d25
+
+
 
 ## Architecture Overview
 
@@ -49,7 +57,7 @@ Set up Debian 13 on the Qualcomm MPU as described in this guide: [UNO Q as a Sin
 
 On the UNO Q Linux side, navigate to the Arduino apps folder and clone the project:
 
-```
+```bash
 cd ~/ArduinoApps
 git clone https://github.com/miguelgonrod/ros_arduino_uno_Q.git
 cd ros_arduino_uno_Q
@@ -59,14 +67,14 @@ cd ros_arduino_uno_Q
 
 Use the provided `run.sh` script, this one will load the provided `.ino` file from the sketch/ directory, and upload it to the UNO Q, also will build and start the container:
 
-```
+```bash
 cd python
 chmod +x run.sh
 ./run.sh
 ```
 This firmware exposes the RPC function:
 
-```
+```cpp
 set_led_state(bool state)
 ```
 
@@ -76,20 +84,20 @@ This launches a minimal ROS 2 Jazzy environment with the Arduino RPC bridge pre-
 
 Since you will run multiple ROS commands inside the container, start a tmux session:
 
-```
+```bash
 tmux
 ```
 
 6) In the first tmux pane: run the ROS 2 subscriber node
 
 Inside the Docker container:
-```
+```bash
 ros2 run ros_led led
 ```
 
 
 You should see:
-```
+```bash
 [INFO] [my_ros2_node]: Node started
 ```
 
@@ -98,12 +106,12 @@ You should see:
 To open a second tmux pane push in your keyboard: `ctrl b` and then `c`
 
 Turn LED OFF:
-```
+```bash
 ros2 topic pub /led_status std_msgs/Bool "data: false" --once
 ```
 
 Turn LED ON:
-```
+```bash
 ros2 topic pub /led_status std_msgs/Bool "data: true" --once
 ```
 
