@@ -1,0 +1,67 @@
+# ----------------------------------------
+# VSCode
+# ----------------------------------------
+.vscode/
+*.code-workspace
+
+# ----------------------------------------
+# Python
+# ----------------------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.egg
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# pip logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ----------------------------------------
+# ROS 2 / Colcon
+# ----------------------------------------
+build/
+install/
+log/
+.colcon/
+colcon_install_layout/
+
+# ROS 2 cache
+.ros/
+.cache/
+
+# ----------------------------------------
+# CMake
+# ----------------------------------------
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# ----------------------------------------
+# Docker
+# ----------------------------------------
+docker-compose.override.yml
+*.tar
+*.img
+
+# ----------------------------------------
+# System & Editor
+# ----------------------------------------
+*~
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ----------------------------------------
+# Environment files
+# ----------------------------------------
+.env
+.env.*
