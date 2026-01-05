@@ -7,7 +7,6 @@ from dataclasses import dataclass
 
 from ros_led.app_utils import brick
 
-
 @dataclass(frozen=True)
 class AQILevel:
     """Data class to represent AQI levels.
