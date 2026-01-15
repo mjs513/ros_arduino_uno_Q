@@ -6,5 +6,7 @@
 # EXAMPLE_REQUIRES = "Requires an audio file with the glass breaking sound."
 from ros_led.app_bricks.audio_classification import AudioClassification
 
-classification = AudioClassification.classify_from_file("glass_breaking.wav")
+classifier = AudioClassification()
+
+classification = classifier.classify_from_file("glass_breaking.wav")
 print("Result:", classification)

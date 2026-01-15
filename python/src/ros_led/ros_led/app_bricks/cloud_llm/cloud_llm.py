@@ -12,7 +12,6 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import SystemMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.chat_history import InMemoryChatMessageHistory
-from langsmith import uuid7
 
 from ros_led.app_utils import Logger, brick
 
@@ -31,11 +30,9 @@ class AlreadyGenerating(Exception):
 
 @brick
 class CloudLLM:
-    """A Brick for interacting with cloud-based Large Language Models (LLMs).
+    """A simplified, opinionated wrapper for common LangChain conversational patterns.
 
-    This class wraps LangChain functionality to provide a simplified, unified interface
-    for chatting with models like Claude, GPT, and Gemini. It supports both synchronous
-    'one-shot' responses and streaming output, with optional conversational memory.
+    This class provides a single interface to manage stateless chat and chat with memory.
     """
 
     def __init__(
@@ -46,24 +43,18 @@ class CloudLLM:
         temperature: Optional[float] = 0.7,
         timeout: int = 30,
     ):
-        """Initializes the CloudLLM brick with the specified provider and configuration.
+        """Initializes the CloudLLM brick with the given configuration.
 
         Args:
-            api_key (str): The API access key for the target LLM service. Defaults to the
-                'API_KEY' environment variable.
-            model (Union[str, CloudModel]): The model identifier. Accepts a `CloudModel`
-                enum member (e.g., `CloudModel.OPENAI_GPT`) or its corresponding raw string
-                value (e.g., `'gpt-4o-mini'`). Defaults to `CloudModel.ANTHROPIC_CLAUDE`.
-            system_prompt (str): A system-level instruction that defines the AI's persona
-                and constraints (e.g., "You are a helpful assistant"). Defaults to empty.
-            temperature (Optional[float]): The sampling temperature between 0.0 and 1.0.
-                Higher values make output more random/creative; lower values make it more
-                deterministic. Defaults to 0.7.
-            timeout (int): The maximum duration in seconds to wait for a response before
-                timing out. Defaults to 30.
+            api_key: The API key for the LLM service.
+            model: The model identifier as per LangChain specification (e.g., "anthropic:claude-3-sonnet-20240229")
+                   or by using a CloudModels enum (e.g. CloudModels.OPENAI_GPT). Defaults to CloudModel.ANTHROPIC_CLAUDE.
+            system_prompt: The global system-level instruction for the AI.
+            temperature: The sampling temperature for response generation. Defaults to 0.7.
+            timeout: The maximum time to wait for a response from the LLM service, in seconds. Defaults to 30 seconds.
 
         Raises:
-            ValueError: If `api_key` is not provided (empty string).
+            ValueError: If the API key is missing.
         """
         if api_key == "":
             raise ValueError("API key is required to initialize CloudLLM brick.")
@@ -88,7 +79,7 @@ class CloudLLM:
             timeout=self._timeout,
         )
         self._parser = StrOutputParser()
-        self._history_cfg = {"configurable": {"session_id": uuid7()}}
+        self._history_cfg = {"configurable": {"session_id": "default_session"}}
 
         core_chain = self._prompt | self._model | self._parser
         self._chain = RunnableWithMessageHistory(
@@ -107,34 +98,34 @@ class CloudLLM:
     def with_memory(self, max_messages: int = DEFAULT_MEMORY) -> "CloudLLM":
         """Enables conversational memory for this instance.
 
-        Configures the Brick to retain a window of previous messages, allowing the
-        AI to maintain context across multiple interactions.
+        This allows the chatbot to remember previous user and AI messages.
+        Calling this modifies the instance to be stateful.
 
         Args:
-            max_messages (int): The maximum number of messages (user + AI) to keep
-                in history. Older messages are discarded. Set to 0 to disable memory.
-                Defaults to 10.
+            max_messages: The total number of past messages (user + AI) to
+                          keep in the conversation window. Set to 0 to disable memory.
 
         Returns:
-            CloudLLM: The current instance, allowing for method chaining.
+            self: The current CloudLLM instance for method chaining.
         """
         self._max_messages = max_messages
 
         return self
 
     def chat(self, message: str) -> str:
-        """Sends a message to the AI and blocks until the complete response is received.
+        """Sends a single message to the AI and gets a complete response synchronously.
 
-        This method automatically manages conversation history if memory is enabled.
+        This is the primary way to interact. It automatically handles memory
+        based on how the instance was configured.
 
         Args:
-            message (str): The input text prompt from the user.
+            message: The user's message.
 
         Returns:
-            str: The complete text response generated by the AI.
+            The AI's complete response as a string.
 
         Raises:
-            RuntimeError: If the internal chain is not initialized or if the API request fails.
+            RuntimeError: If the chat model is not initialized or if text generation fails.
         """
         if self._chain is None:
             raise RuntimeError("CloudLLM brick is not started. Please call start() before generating text.")
@@ -145,20 +136,19 @@ class CloudLLM:
             raise RuntimeError(f"Response generation failed: {e}")
 
     def chat_stream(self, message: str) -> Iterator[str]:
-        """Sends a message to the AI and yields response tokens as they are generated.
+        """Sends a single message to the AI and streams the response as a synchronous generator.
 
-        This allows for processing or displaying the response in real-time (streaming).
-        The generation can be interrupted by calling `stop_stream()`.
+        Use this to get tokens as they are generated, perfect for a streaming UI.
 
         Args:
-            message (str): The input text prompt from the user.
+            message: The user's message.
 
         Yields:
-            str: Chunks of text (tokens) from the AI response.
+            str: Chunks of the AI's response as they become available.
 
         Raises:
-            RuntimeError: If the internal chain is not initialized or if the API request fails.
-            AlreadyGenerating: If a streaming session is already active.
+            RuntimeError: If the chat model is not initialized or if text generation fails.
+            AlreadyGenerating: If the chat model is already streaming a response.
         """
         if self._chain is None:
             raise RuntimeError("CloudLLM brick is not started. Please call start() before generating text.")
@@ -177,33 +167,18 @@ class CloudLLM:
             self._keep_streaming.clear()
 
     def stop_stream(self) -> None:
-        """Signals the active streaming generation to stop.
-
-        This sets an internal flag that causes the `chat_stream` iterator to break
-        early. It has no effect if no stream is currently running.
-        """
+        """Signals the LLM to stop generating a response."""
         self._keep_streaming.clear()
 
     def clear_memory(self) -> None:
-        """Clears the conversational memory history.
+        """Clears the conversational memory.
 
-        Resets the stored context. This is useful for starting a new conversation
-        topic without previous context interfering. Only applies if memory is enabled.
+        This only has an effect if with_memory() has been called.
         """
         if self._history:
             self._history.clear()
 
     def _get_session_history(self, session_id: str) -> WindowedChatMessageHistory:
-        """Retrieves or creates the chat history for a given session.
-
-        Internal callback used by LangChain's `RunnableWithMessageHistory`.
-
-        Args:
-            session_id (str): The unique identifier for the session.
-
-        Returns:
-            WindowedChatMessageHistory: The history object managing the message window.
-        """
         if self._max_messages == 0:
             self._history = InMemoryChatMessageHistory()
         if self._history is None:
@@ -212,21 +187,6 @@ class CloudLLM:
 
 
 def model_factory(model_name: CloudModel, **kwargs) -> BaseChatModel:
-    """Factory function to instantiate the specific LangChain chat model.
-
-    This function maps the supported `CloudModel` enum values to their respective
-    LangChain implementations.
-
-    Args:
-        model_name (CloudModel): The enum or string identifier for the model.
-        **kwargs: Additional arguments passed to the model constructor (e.g., api_key, temperature).
-
-    Returns:
-        BaseChatModel: An instance of a LangChain chat model wrapper.
-
-    Raises:
-        ValueError: If `model_name` does not match one of the supported `CloudModel` options.
-    """
     if model_name == CloudModel.ANTHROPIC_CLAUDE:
         from langchain_anthropic import ChatAnthropic
 

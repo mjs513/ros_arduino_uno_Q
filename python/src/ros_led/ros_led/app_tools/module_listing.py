@@ -14,6 +14,8 @@ import time
 from urllib.parse import urlparse
 from typing import List, Dict, Optional
 from ros_led.app_internal.core.module import (
+    load_module_supported_variables,
+    ModuleVariable,
     _update_compose_release_version,
     EnvVariable,
 )
@@ -52,6 +54,9 @@ class ArduinoBrick:
         self.compose_file: Optional[str] = self.get_compose_file()
         self.readme_file: Optional[str] = self.get_readme_file()
         self.require_container: bool = self.compose_file is not None
+        self.docker_compose_variables: Optional[List[ModuleVariable]] = (
+            load_module_supported_variables(self.compose_file) if self.require_container else None
+        )
         self.model_name: str = model_name
         self.require_model: bool = model_name != ""
         self.category = category
@@ -78,14 +83,21 @@ class ArduinoBrick:
         if self.required_device_classes:
             out_dict["required_devices"] = self.required_device_classes
 
+        if self.require_container:
+            var_to_add: List[ModuleVariable] = []
+            for var in self.docker_compose_variables:
+                if var.name != "APPSLAB_VERSION" and var.name != "DOCKER_REGISTRY_BASE" and var.name != "BIND_ADDRESS" and var.name != "BIND_PORT":
+                    var_to_add.append(var)
+            vars_list: List[Dict] = [var.to_dict() for var in var_to_add]
+            out_dict["variables"] = vars_list
+
         if self.env_variables and len(self.env_variables) > 0:
             additional_vars: List[EnvVariable] = []
             for var in self.env_variables:
                 name = var.get("name")
                 description = var.get("description", "")
                 default = var.get("default_value", "")
-                hidden = var.get("hidden", False)
-                additional_vars.append(EnvVariable(name, description, default, hidden))
+                additional_vars.append(EnvVariable(name, description, default))
             if "variables" in out_dict:
                 out_dict["variables"].extend([var.to_dict() for var in additional_vars])
             else:
@@ -278,7 +290,7 @@ def save_examples_files(module: ArduinoBrick, output_dir: str):
 def library_provisioning(out_path: str = None, modules: Dict[str, List[ArduinoBrick]] = None, buildtime: bool = False):
     print(f"Provisioning compose files for app execution and bricks documentation. File: {out_path}")
     try:
-        from arduino._version import __version__ as arduino_bricks_version
+        from ros_led._version import __version__ as arduino_bricks_version
     except ImportError:
         logger.error("Error: AppLab version not found. 'appslab._version' module is not available.")
         sys.exit(1)
